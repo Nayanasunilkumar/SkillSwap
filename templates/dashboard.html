@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Dashboard - SkillSwap{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar Navigation -->
+        <nav class="dashboard-nav">
+            <div class="nav-header">
+                <h2>SkillSwap</h2>
+            </div>
+            <div class="nav-links">
+                <a href="{{ url_for('dashboard') }}" class="nav-link {% if active_page == 'home' %}active{% endif %}">
+                    <i class="fas fa-home"></i>
+                    <span>Home</span>
+                </a>
+                <a href="{{ url_for('search') }}" class="nav-link {% if active_page == 'search' %}active{% endif %}">
+                    <i class="fas fa-search"></i>
+                    <span>Search</span>
+                </a>
+                <a href="{{ url_for('profile') }}" class="nav-link {% if active_page == 'profile' %}active{% endif %}">
+                    <i class="fas fa-user"></i>
+                    <span>Profile</span>
+                </a>
+                <a href="{{ url_for('skills') }}" class="nav-link {% if active_page == 'skills' %}active{% endif %}">
+                    <i class="fas fa-star"></i>
+                    <span>Skills</span>
+                </a>
+                <a href="{{ url_for('connections') }}" class="nav-link {% if active_page == 'connections' %}active{% endif %}">
+                    <i class="fas fa-users"></i>
+                    <span>Connections</span>
+                    <span id="pending-connections-count" class="notification-badge" style="display: none;">0</span>
+                </a>
+            </div>
+            <div class="nav-footer">
+                <a href="{{ url_for('logout') }}" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="dashboard-main">
+            <!-- Top Header -->
+            <header class="dashboard-header">
+                <div class="user-menu">
+                    <div class="notifications">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-badge">3</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dynamic Content Area -->
+            <div class="dashboard-content">
+                {% block content %}
+                <!-- Default Dashboard Home Content -->
+                <div class="content-section">
+                    <h2>Welcome, {{ session.get('user_name', 'User') }}!</h2>
+                    
+                    <!-- Other Users' Skills Section -->
+                    <div class="other-skills-section">
+                        <h3>Discover Skills</h3>
+                        <div class="skills-list">
+                            {% for skill in other_users_skills[:4] %}
+                            <div class="skill-card {% if skill.matches_interest %}matching-interest{% endif %}">
+                                <div class="skill-user">
+                                    <img src="{{ url_for('static', filename='images/default-avatar.png') if not skill.profile_picture or skill.profile_picture == 'default-avatar.png' else url_for('static', filename='uploads/profiles/' + skill.profile_picture) }}" alt="{{ skill.user_name }}">
+                                    <span>{{ skill.user_name }}</span>
+                                </div>
+                                <div class="skill-info">
+                                    <h4>{{ skill.skill_name }}</h4>
+                                    <span class="qualification-badge {{ skill.qualification.lower() }}">{{ skill.qualification }}</span>
+                                    <p class="skill-description">{{ skill.description }}</p>
+                                    <div class="skill-meta">
+                                        <span><i class="fas fa-clock"></i> {{ skill.years_of_experience }} years experience</span>
+                                        {% if skill.matches_interest %}
+                                        <span class="interest-match"><i class="fas fa-star"></i> Matches your interests</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="skill-actions">
+                                    <button class="view-details-btn" onclick="viewUserDetails('{{ skill.user_id }}')">
+                                        <i class="fas fa-eye"></i> View Details
+                                    </button>
+                                    <button class="connect-btn" onclick="connectWithUser('{{ skill.user_id }}')" data-user-id="{{ skill.user_id }}">
+                                        <i class="fas fa-user-plus"></i> Connect
+                                    </button>
+                                    <button class="message-btn">
+                                        <i class="fas fa-comment"></i> Message
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Featured Users Section -->
+                        <div class="featured-users-section">
+                            <h3>Featured Users</h3>
+                            <div class="featured-users-cards">
+                                {% for user in featured_users %}
+                                <div class="featured-user-card">
+                                    <div class="user-avatar">
+                                        <img src="{{ url_for('static', filename='images/default-avatar.png') if not user.profile_picture or user.profile_picture == 'default-avatar.png' else url_for('static', filename='uploads/profiles/' + user.profile_picture) }}" alt="{{ user.name }}">
+                                    </div>
+                                    <div class="user-info">
+                                        <h4>{{ user.name }}</h4>
+                                        <p class="user-skills">{{ user.skills|join(', ') }}</p>
+                                        <button class="connect-btn" onclick="connectWithUser('{{ user.id }}')" data-user-id="{{ user.id }}">
+                                            <i class="fas fa-user-plus"></i> Connect
+                                        </button>
+                                        <button class="view-details-btn" onclick="viewUserDetails('{{ user.id }}')">
+                                            <i class="fas fa-eye"></i> View Details
+                                        </button>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="skills-list">
+                            {% for skill in other_users_skills[4:] %}
+                            <div class="skill-card {% if skill.matches_interest %}matching-interest{% endif %}">
+                                <div class="skill-user">
+                                    <img src="{{ url_for('static', filename='images/default-avatar.png') if not skill.profile_picture or skill.profile_picture == 'default-avatar.png' else url_for('static', filename='uploads/profiles/' + skill.profile_picture) }}" alt="{{ skill.user_name }}">
+                                    <span>{{ skill.user_name }}</span>
+                                </div>
+                                <div class="skill-info">
+                                    <h4>{{ skill.skill_name }}</h4>
+                                    <span class="qualification-badge {{ skill.qualification.lower() }}">{{ skill.qualification }}</span>
+                                    <p class="skill-description">{{ skill.description }}</p>
+                                    <div class="skill-meta">
+                                        <span><i class="fas fa-clock"></i> {{ skill.years_of_experience }} years experience</span>
+                                        {% if skill.matches_interest %}
+                                        <span class="interest-match"><i class="fas fa-star"></i> Matches your interests</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="skill-actions">
+                                    <button class="view-details-btn" onclick="viewUserDetails('{{ skill.user_id }}')">
+                                        <i class="fas fa-eye"></i> View Details
+                                    </button>
+                                    <button class="connect-btn" onclick="connectWithUser('{{ skill.user_id }}')" data-user-id="{{ skill.user_id }}">
+                                        <i class="fas fa-user-plus"></i> Connect
+                                    </button>
+                                    <button class="message-btn">
+                                        <i class="fas fa-comment"></i> Message
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Skill Details Modal -->
+                <div id="skillDetailsModal" class="modal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2>Skill Details</h2>
+                            <span class="close" onclick="hideSkillDetailsModal()">&times;</span>
+                        </div>
+                        <div class="modal-body">
+                            <div class="user-info-section">
+                                <img id="modalUserImage" src="" alt="User Image">
+                                <h3 id="modalUserName"></h3>
+                            </div>
+                            <div class="skill-details-section">
+                                <h4 id="modalSkillName"></h4>
+                                <div class="skill-meta">
+                                    <span id="modalQualification" class="qualification-badge"></span>
+                                    <span id="modalExperience"><i class="fas fa-clock"></i> <span></span> years experience</span>
+                                </div>
+                                <div class="skill-description-section">
+                                    <h5>Description</h5>
+                                    <p id="modalDescription"></p>
+                                </div>
+                            </div>
+                            <div class="modal-actions">
+                                <button class="connect-btn">
+                                    <i class="fas fa-user-plus"></i> Connect
+                                </button>
+                                <button class="message-btn">
+                                    <i class="fas fa-comment"></i> Message
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- User Details Modal -->
+                <div id="userDetailsModal" class="modal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2>User Details</h2>
+                            <button class="close-modal">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="user-info-section">
+                                <img id="userDetailsImage" src="/static/images/default-avatar.png" alt="User Profile">
+                                <div>
+                                    <h3 id="userDetailsName">Loading...</h3>
+                                    <p id="userDetailsEmail">Loading...</p>
+                                    <p id="userDetailsLocation">Loading...</p>
+                                </div>
+                            </div>
+                            <div class="skill-details-section">
+                                <h4>Skills</h4>
+                                <div id="userDetailsSkills" class="skills-container">
+                                    <p>Loading skills...</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-actions">
+                            <button class="connect-btn">
+                                <i class="fas fa-user-plus"></i> Connect
+                            </button>
+                            <button class="message-btn">
+                                <i class="fas fa-envelope"></i> Message
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    {% block scripts %}{% endblock %}
+
+    <style>
+    .notification-badge {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        background-color: #ef4444;
+        color: white;
+        border-radius: 50%;
+        padding: 2px 6px;
+        font-size: 12px;
+        font-weight: bold;
+        min-width: 18px;
+        height: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .nav-link {
+        position: relative;
+    }
+    </style>
+
+    <script>
+    // Function to update pending connections count
+    async function updatePendingConnectionsCount() {
+        try {
+            const response = await fetch('/api/connections');
+            const data = await response.json();
+            const count = data.pending_connections ? data.pending_connections.length : 0;
+            const badge = document.getElementById('pending-connections-count');
+            
+            if (count > 0) {
+                badge.textContent = count;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        } catch (error) {
+            console.error('Error updating pending connections count:', error);
+        }
+    }
+
+    // Update count when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        updatePendingConnectionsCount();
+        // Update count every 30 seconds
+        setInterval(updatePendingConnectionsCount, 30000);
+    });
+    </script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+                    <div class="user-profile">
+                        <img src="{{ url_for('static', filename='uploads/profiles/' + profile.profile_picture) if profile and profile.profile_picture else url_for('static', filename='images/default-avatar.png') }}" alt="Profile">
+                        <span>{{ session.get('user_name', 'User') }}</span>
+                    </div> 

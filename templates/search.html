@@ -1,0 +1,567 @@
+{% extends "dashboard.html" %}
+
+{% block title %}Search - SkillSwap{% endblock %}
+
+{% block content %}
+<div class="search-page">
+    <div class="content-section">
+        <h2>Search Users & Skills</h2>
+        
+        <!-- Search Form -->
+        <div class="search-form">
+            <div class="search-input-group">
+                <input type="text" id="searchInput" placeholder="Search by username, skill, or location...">
+                <button onclick="performSearch()">
+                    <i class="fa-search fas"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Search Results -->
+        <div class="search-results">
+            <!-- Users Results -->
+            <div id="usersResults" class="results-section">
+                <h3>Users</h3>
+                <div class="users-grid" id="usersGrid">
+                    <!-- Users will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Skills Results -->
+            <div id="skillsResults" class="results-section">
+                <h3>Skills</h3>
+                <div class="skills-grid" id="skillsGrid">
+                    <!-- Skills will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.search-page {
+    padding: 2rem;
+}
+
+.content-section {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.content-section h2 {
+    font-size: 2rem;
+    color: #1f2937;
+    margin-bottom: 1.5rem;
+}
+
+.search-form {
+    margin-bottom: 2rem;
+}
+
+.search-input-group {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.search-input-group input {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.2s ease;
+}
+
+.search-input-group input:focus {
+    outline: none;
+    border-color: #3b82f6;
+}
+
+.search-input-group button {
+    padding: 0.75rem 1.5rem;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.search-input-group button:hover {
+    background: #2563eb;
+}
+
+.results-section {
+    margin-bottom: 3rem;
+}
+
+.results-section h3 {
+    font-size: 1.5rem;
+    color: #374151;
+    margin-bottom: 1.5rem;
+}
+
+.users-grid, .skills-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.user-card, .skill-card {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e5e7eb;
+}
+
+.user-card {
+    display: flex;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.user-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.user-avatar img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #e5e7eb;
+}
+
+.user-info {
+    flex: 1;
+}
+
+.user-info h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.25rem;
+    color: #111827;
+}
+
+.location {
+    color: #6b7280;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+.about {
+    color: #4b5563;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    line-height: 1.5;
+}
+
+.user-skills {
+    margin: 1rem 0;
+}
+
+.user-skills h5 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
+    color: #374151;
+}
+
+.skill-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.skill-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.skill-tag small {
+    color: #6b7280;
+    font-size: 0.75rem;
+}
+
+.skill-tag.expert {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.skill-tag.intermediate {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.skill-tag.beginner {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.skill-tag.more {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+.certifications, .projects {
+    margin: 1rem 0;
+    padding: 1rem;
+    background: #f9fafb;
+    border-radius: 8px;
+}
+
+.certifications h5, .projects h5 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.9rem;
+    color: #374151;
+}
+
+.certifications ul, .projects ul {
+    margin: 0;
+    padding-left: 1.5rem;
+    color: #4b5563;
+    font-size: 0.9rem;
+}
+
+.certifications li, .projects li {
+    margin-bottom: 0.25rem;
+}
+
+.user-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.skill-card {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.skill-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.skill-header img {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.skill-info h4 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.1rem;
+    color: #111827;
+}
+
+.skill-info p {
+    margin: 0;
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
+.qualification-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.qualification-badge.expert {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.qualification-badge.intermediate {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.qualification-badge.beginner {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.skill-description {
+    color: #4b5563;
+    font-size: 0.9rem;
+    margin: 0.5rem 0;
+}
+
+.skill-meta {
+    display: flex;
+    gap: 1rem;
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+.no-results {
+    text-align: center;
+    padding: 3rem;
+    background: #f9fafb;
+    border-radius: 8px;
+    border: 1px dashed #e5e7eb;
+}
+
+.no-results i {
+    font-size: 3rem;
+    color: #9ca3af;
+    margin-bottom: 1rem;
+}
+
+.no-results p {
+    color: #6b7280;
+    margin-bottom: 1rem;
+}
+
+.loading-spinner {
+    text-align: center;
+    padding: 2rem;
+}
+
+.loading-spinner i {
+    font-size: 2rem;
+    color: #3b82f6;
+}
+
+.view-profile-btn, .connect-btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background-color 0.2s ease;
+}
+
+.view-profile-btn {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.view-profile-btn:hover {
+    background: #e5e7eb;
+}
+
+.connect-btn {
+    background: #3b82f6;
+    color: white;
+}
+
+.connect-btn:hover {
+    background: #2563eb;
+}
+</style>
+
+<script>
+// Function to perform search
+async function performSearch() {
+    const searchQuery = document.getElementById('searchInput').value.trim();
+
+    if (!searchQuery) {
+        showNotification('Please enter a search term', 'error');
+        return;
+    }
+
+    // Show loading state
+    document.getElementById('usersGrid').innerHTML = '<div class="loading-spinner"><i class="fa-spin fa-spinner fas"></i></div>';
+    document.getElementById('skillsGrid').innerHTML = '<div class="loading-spinner"><i class="fa-spin fa-spinner fas"></i></div>';
+
+    try {
+        const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`);
+        const data = await response.json();
+
+        // Update users results
+        const usersGrid = document.getElementById('usersGrid');
+        if (data.users && data.users.length > 0) {
+            usersGrid.innerHTML = data.users.map(user => `
+                <div class="user-card">
+                    <div class="user-avatar">
+                        <img src="${getProfilePictureUrl(user.profile_picture)}" alt="${user.username}">
+                    </div>
+                    <div class="user-info">
+                        <h4>${user.username}</h4>
+                        <p class="location"><i class="fa-map-marker-alt fas"></i> ${user.location}</p>
+                        ${user.about ? `<p class="about">${user.about}</p>` : ''}
+                        ${user.skills.length > 0 ? `
+                            <div class="user-skills">
+                                <h5>Top Skills</h5>
+                                <div class="skill-tags">
+                                    ${user.skills.map(skill => `
+                                        <span class="${skill.qualification.toLowerCase()} skill-tag">
+                                            ${skill.name}
+                                            <small>(${skill.years} years)</small>
+                                        </span>
+                                    `).join('')}
+                                    ${user.total_skills > 3 ? `
+                                        <span class="more skill-tag">+${user.total_skills - 3} more</span>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        ` : ''}
+                        <div class="user-actions">
+                            <button class="view-profile-btn" onclick="viewProfile('${user.id}')">
+                                <i class="fa-user fas"></i>
+                                View Profile
+                            </button>
+                            <button class="connect-btn" onclick="connectWithUser('${user.id}')">
+                                <i class="fa-user-plus fas"></i>
+                                Connect
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            usersGrid.innerHTML = `
+                <div class="no-results">
+                    <i class="fa-user-slash fas"></i>
+                    <p>No users found</p>
+                </div>
+            `;
+        }
+
+        // Update skills results
+        const skillsGrid = document.getElementById('skillsGrid');
+        if (data.skills && data.skills.length > 0) {
+            skillsGrid.innerHTML = data.skills.map(skill => `
+                <div class="skill-card">
+                    <div class="skill-header">
+                        <img src="${getProfilePictureUrl(skill.user.profile_picture)}" alt="${skill.user.username}">
+                        <div class="skill-info">
+                            <h4>${skill.skill_name}</h4>
+                            <p>${skill.user.username}</p>
+                        </div>
+                    </div>
+                    <span class="${skill.qualification.toLowerCase()} qualification-badge">${skill.qualification}</span>
+                    <p class="skill-description">${skill.description}</p>
+                    <div class="skill-meta">
+                        <span><i class="fa-clock fas"></i> ${skill.years_of_experience} years</span>
+                        <span><i class="fa-map-marker-alt fas"></i> ${skill.user.location}</span>
+                    </div>
+                    ${skill.certifications.length > 0 ? `
+                        <div class="certifications">
+                            <h5>Certifications</h5>
+                            <ul>
+                                ${skill.certifications.map(cert => `
+                                    <li>${cert}</li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+                    ${skill.projects.length > 0 ? `
+                        <div class="projects">
+                            <h5>Projects</h5>
+                            <ul>
+                                ${skill.projects.map(project => `
+                                    <li>${project}</li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+                    <div class="skill-actions">
+                        <button class="view-profile-btn" onclick="viewProfile('${skill.user.id}')">
+                            <i class="fa-user fas"></i>
+                            View Profile
+                        </button>
+                        <button class="connect-btn" onclick="connectWithUser('${skill.user.id}')">
+                            <i class="fa-user-plus fas"></i>
+                            Connect
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            skillsGrid.innerHTML = `
+                <div class="no-results">
+                    <i class="fa-star fas"></i>
+                    <p>No skills found</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error performing search:', error);
+        showNotification('Failed to perform search', 'error');
+    }
+}
+
+// Function to get profile picture URL
+function getProfilePictureUrl(profilePicture) {
+    if (!profilePicture || profilePicture === 'default-avatar.png') {
+        return '/static/images/default-avatar.png';
+    }
+    return `/static/uploads/profiles/${profilePicture}`;
+}
+
+// Function to show notifications
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type} show`;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            notification.remove();
+        }, 300);
+    }, 3000);
+}
+
+// Function to view user profile
+function viewProfile(userId) {
+    window.location.href = `/profile/${userId}`;
+}
+
+// Function to connect with user
+async function connectWithUser(userId) {
+    try {
+        const response = await fetch('/api/connections/request', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ user_id: userId })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showNotification('Connection request sent successfully!', 'success');
+            updatePendingConnectionsCount();
+        } else {
+            showNotification(data.message || 'Failed to send connection request', 'error');
+        }
+    } catch (error) {
+        console.error('Error sending connection request:', error);
+        showNotification('Failed to send connection request', 'error');
+    }
+}
+
+// Add event listener for Enter key in search input
+document.getElementById('searchInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        performSearch();
+    }
+});
+</script>
+{% endblock %} 
