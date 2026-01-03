@@ -7,7 +7,8 @@ from functools import wraps
 from werkzeug.utils import secure_filename
 from datetime import datetime
 import time
-
+ADMIN_EMAIL = "admin@skillswap.com"
+ADMIN_PASSWORD = "admin123"
 app = Flask(__name__)
 CORS(app)
 app.secret_key = 'your-secret-key-here'  # Change this to a secure secret key
@@ -81,7 +82,7 @@ def inject_profile():
     if 'user_id' in session:
         user_id = str(session['user_id'])
         profiles = load_json('profile.json')
-        user_profiles = [p for p in profiles['profiles'] if str(p['user_id']) == user_id]
+        user_profiles = [p for p in profiles if str(p['user_id']) == user_id]
         user_profile = max(user_profiles, key=lambda x: x.get('updated_at', '')) if user_profiles else None
         
         if not user_profile:
@@ -94,7 +95,7 @@ def inject_profile():
                 "created_at": datetime.now().isoformat(),
                 "updated_at": datetime.now().isoformat()
             }
-            profiles['profiles'].append(user_profile)
+            profiles.append(user_profile)
             save_json(profiles, 'profile.json')
         
         return {'profile': user_profile}
@@ -157,16 +158,53 @@ def register():
     
     return render_template('register.html')
 
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+
+        if email == ADMIN_EMAIL and password == ADMIN_PASSWORD:
+            session['admin'] = True
+            return redirect(url_for('admin_dashboard'))
+        else:
+            flash('Invalid admin credentials')
+
+    return render_template('admin_login.html')
+
+@app.route('/admin/dashboard')
+def admin_dashboard():
+    if not session.get('admin'):
+        return redirect(url_for('admin_login'))
+
+    users = load_json('users.json')
+    skills = load_json('skills.json')
+    connections = load_json('connections.json')
+
+    return render_template(
+        'admin_dashboard.html',
+        users=users,
+        skills=skills,
+        connections=connections
+    )
+
 @app.route('/dashboard')
 @login_required
 def dashboard():
     user_id = str(session['user_id'])
     
     # Load profile data
-    profiles = load_json('profile.json')
+    profiles = load_json('profile.json')  # LIST
     users = load_json('users.json')
-    user_profile = next((p for p in profiles['profiles'] if str(p['user_id']) == user_id), None)
-    
+
+    user_profile = next(
+    (p for p in profiles if str(p.get('user_id')) == user_id),
+    None
+)
+
+    if not user_profile:
+        return "User profile not found", 404
+
     # Load skills data
     skills_data = load_json('skills.json')
     user_skills = skills_data.get('user_skills', {}).get(user_id, [])
@@ -176,7 +214,7 @@ def dashboard():
     
     # Get other users' skills
     other_users_skills = []
-    for profile in profiles['profiles']:
+    for profile in profiles:
         if str(profile['user_id']) != user_id:
             user_data = next((u for u in users if str(u['id']) == str(profile['user_id'])), None)
             user_skills_list = skills_data.get('user_skills', {}).get(str(profile['user_id']), [])
@@ -198,7 +236,7 @@ def dashboard():
     
     # Get featured users (users with similar interests)
     featured_users = []
-    for profile in profiles['profiles']:
+    for profile in profiles:
         if str(profile['user_id']) != user_id:
             user_data = next((u for u in users if str(u['id']) == str(profile['user_id'])), None)
             user_skills_list = skills_data.get('user_skills', {}).get(str(profile['user_id']), [])
@@ -226,7 +264,7 @@ def profile():
     
     # Load profile data
     profiles = load_json('profile.json')
-    profile_data = next((p for p in profiles['profiles'] if p['user_id'] == user_id), None)
+    profile_data = next((p for p in profiles if p['user_id'] == user_id), None)
     
     # Load user's skills from skills.json
     skills_data = load_json('skills.json')
@@ -243,7 +281,7 @@ def profile():
             "created_at": datetime.now().isoformat(),
             "updated_at": datetime.now().isoformat()
         }
-        profiles['profiles'].append(profile_data)
+        profiles.append(profile_data)
         save_json(profiles, 'profile.json')
     
     return render_template('profile.html',
@@ -257,7 +295,7 @@ def profile():
 def update_profile():
     user_id = session['user_id']
     profiles = load_json('profile.json')
-    profile_data = next((p for p in profiles['profiles'] if p['user_id'] == user_id), None)
+    profile_data = next((p for p in profiles if p['user_id'] == user_id), None)
     
     if not profile_data:
         return jsonify({'success': False, 'error': 'Profile not found'})
@@ -391,7 +429,7 @@ def api_search():
             # Don't include the current user in results
             if str(user['id']) != str(session['user_id']):
                 # Get user's profile
-                user_profile = next((p for p in profiles['profiles'] if str(p['user_id']) == str(user['id'])), None)
+                user_profile = next((p for p in profiles if str(p['user_id']) == str(user['id'])), None)
                 
                 # Get user's skills
                 user_skills = skills_data.get('user_skills', {}).get(str(user['id']), [])
@@ -419,7 +457,7 @@ def api_search():
                 user = next((u for u in users if str(u['id']) == str(user_id)), None)
                 if user and str(user['id']) != str(session['user_id']):
                     # Get user's profile
-                    user_profile = next((p for p in profiles['profiles'] if str(p['user_id']) == str(user_id)), None)
+                    user_profile = next((p for p in profiles if str(p['user_id']) == str(user_id)), None)
                     
                     results['skills'].append({
                         'id': skill['skill_id'],
@@ -527,7 +565,7 @@ def add_interest():
         return jsonify({'success': False, 'error': 'No interest provided'})
     
     profiles = load_json('profile.json')
-    profile_data = next((p for p in profiles['profiles'] if p['user_id'] == user_id), None)
+    profile_data = next((p for p in profiles if p['user_id'] == user_id), None)
     
     if profile_data and interest not in profile_data['interests']:
         profile_data['interests'].append(interest)
@@ -547,7 +585,7 @@ def remove_interest():
         return jsonify({'success': False, 'error': 'No interest provided'})
     
     profiles = load_json('profile.json')
-    profile_data = next((p for p in profiles['profiles'] if p['user_id'] == user_id), None)
+    profile_data = next((p for p in profiles if p['user_id'] == user_id), None)
     
     if profile_data and interest in profile_data['interests']:
         profile_data['interests'].remove(interest)
@@ -567,7 +605,7 @@ def add_education():
     profiles = load_json('profile.json')
     
     # Find user's profile
-    user_profile = next((p for p in profiles['profiles'] if p['user_id'] == user_id), None)
+    user_profile = next((p for p in profiles if p['user_id'] == user_id), None)
     
     if not user_profile:
         return jsonify({'success': False, 'message': 'Profile not found'})
@@ -595,7 +633,7 @@ def add_work():
     profiles = load_json('profile.json')
     
     # Find user's profile
-    user_profile = next((p for p in profiles['profiles'] if p['user_id'] == user_id), None)
+    user_profile = next((p for p in profiles if p['user_id'] == user_id), None)
     
     if not user_profile:
         return jsonify({'success': False, 'message': 'Profile not found'})
@@ -621,7 +659,7 @@ def get_education(education_id):
         profiles = load_json('profile.json')
         
         # Find user's profile
-        user_profile = next((p for p in profiles['profiles'] if p['user_id'] == user_id), None)
+        user_profile = next((p for p in profiles if p['user_id'] == user_id), None)
         
         if not user_profile or 'education' not in user_profile:
             return jsonify({'success': False, 'message': 'Profile or education not found'})
@@ -644,7 +682,7 @@ def update_education():
         education_data = request.get_json()
         
         profiles = load_json('profile.json')
-        user_profile = next((p for p in profiles['profiles'] if p['user_id'] == user_id), None)
+        user_profile = next((p for p in profiles if p['user_id'] == user_id), None)
         
         if not user_profile or 'education' not in user_profile:
             return jsonify({'success': False, 'message': 'Profile or education not found'})
@@ -674,7 +712,7 @@ def get_work(work_id):
         profiles = load_json('profile.json')
         
         # Find user's profile
-        user_profile = next((p for p in profiles['profiles'] if p['user_id'] == user_id), None)
+        user_profile = next((p for p in profiles if p['user_id'] == user_id), None)
         
         if not user_profile or 'work_experience' not in user_profile:
             return jsonify({'success': False, 'message': 'Profile or work experience not found'})
@@ -697,7 +735,7 @@ def update_work():
         work_data = request.get_json()
         
         profiles = load_json('profile.json')
-        user_profile = next((p for p in profiles['profiles'] if p['user_id'] == user_id), None)
+        user_profile = next((p for p in profiles if p['user_id'] == user_id), None)
         
         if not user_profile or 'work_experience' not in user_profile:
             return jsonify({'success': False, 'message': 'Profile or work experience not found'})
@@ -788,7 +826,7 @@ def get_user_profile(user_id):
             return jsonify({'error': 'User not found'}), 404
         
         # Get user's profile
-        user_profile = next((p for p in profiles['profiles'] if str(p['user_id']) == str(user_id)), None)
+        user_profile = next((p for p in profiles if str(p['user_id']) == str(user_id)), None)
         
         # Get user's skills
         user_skills = skills_data.get('user_skills', {}).get(str(user_id), [])
@@ -849,7 +887,7 @@ def get_connections():
                 continue
 
             # Get user profile
-            user_profile = next((p for p in profiles['profiles'] if str(p['user_id']) == str(other_user_id)), None)
+            user_profile = next((p for p in profiles if str(p['user_id']) == str(other_user_id)), None)
             
             # Get user skills
             user_skills = skills_data.get('user_skills', {}).get(str(other_user_id), [])
@@ -1052,3 +1090,4 @@ def debug_connections():
 
 if __name__ == '__main__':
     app.run(debug=True)
+

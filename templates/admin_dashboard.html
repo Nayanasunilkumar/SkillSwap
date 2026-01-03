@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f7fa;
+            padding: 30px;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            width: 300px;
+        }
+        a {
+            display: inline-block;
+            margin-top: 20px;
+            color: red;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>👑 Admin Dashboard</h1>
+
+    <div class="card">
+        <h3>Total Users</h3>
+        <p>{{ users|length }}</p>
+    </div>
+
+    <div class="card">
+        <h3>Total Skills</h3>
+        <p>{{ skills|length }}</p>
+    </div>
+
+    <div class="card">
+        <h3>Total Connections</h3>
+        <p>{{ connections|length }}</p>
+    </div>
+
+    <a href="/logout">Logout</a>
+
+</body>
+</html>
